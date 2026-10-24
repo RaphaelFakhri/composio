@@ -301,30 +301,13 @@ def _is_url(value: str) -> bool:
 
 
 def _get_extension_from_mimetype(mimetype: str) -> str:
-    """Get file extension from mimetype."""
-    mime_to_ext = {
-        "image/jpeg": ".jpg",
-        "image/png": ".png",
-        "image/gif": ".gif",
-        "image/webp": ".webp",
-        "image/svg+xml": ".svg",
-        "image/bmp": ".bmp",
-        "image/tiff": ".tiff",
-        "application/pdf": ".pdf",
-        "application/json": ".json",
-        "application/xml": ".xml",
-        "text/plain": ".txt",
-        "text/html": ".html",
-        "text/css": ".css",
-        "text/javascript": ".js",
-        "application/zip": ".zip",
-        "application/gzip": ".gz",
-        "audio/mpeg": ".mp3",
-        "audio/wav": ".wav",
-        "video/mp4": ".mp4",
-        "video/webm": ".webm",
-    }
-    return mime_to_ext.get(mimetype.lower(), "")
+    """Get file extension (with a leading dot) from mimetype.
+
+    Uses the same MIME table as the TypeScript SDK so that files fetched from
+    extensionless URLs get the same extension in both SDKs.
+    """
+    extension = mimetypes.get_extension_from_mime_type(mimetype)
+    return f".{extension}" if extension else ""
 
 
 def _generate_timestamped_filename(extension: str) -> str:

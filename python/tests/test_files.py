@@ -1781,10 +1781,28 @@ class TestUrlHelperFunctions:
         assert _get_extension_from_mimetype("text/plain") == ".txt"
         assert _get_extension_from_mimetype("application/json") == ".json"
 
+    def test_get_extension_from_mimetype_office_types(self):
+        """Test _get_extension_from_mimetype maps the same types as the TS SDK."""
+        assert (
+            _get_extension_from_mimetype(
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+            == ".xlsx"
+        )
+        assert (
+            _get_extension_from_mimetype(
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            )
+            == ".docx"
+        )
+        assert _get_extension_from_mimetype("text/csv") == ".csv"
+        assert _get_extension_from_mimetype("video/quicktime") == ".mov"
+
     def test_get_extension_from_mimetype_unknown_type(self):
-        """Test _get_extension_from_mimetype returns empty for unknown types."""
-        assert _get_extension_from_mimetype("application/unknown") == ""
-        assert _get_extension_from_mimetype("custom/type") == ""
+        """Test _get_extension_from_mimetype falls back to the subtype, like the TS SDK."""
+        assert _get_extension_from_mimetype("application/unknown") == ".unknown"
+        assert _get_extension_from_mimetype("custom/type") == ".type"
+        assert _get_extension_from_mimetype("not-a-mimetype") == ".bin"
 
     def test_get_extension_from_mimetype_case_insensitive(self):
         """Test _get_extension_from_mimetype handles case-insensitive mimetypes (RFC 2045)."""
@@ -1890,6 +1908,30 @@ class TestFetchFileFromUrl:
 
         assert filename.startswith("file_")
         assert filename.endswith(".pdf")
+
+    @patch("composio.core.models._files.safe_get")
+    def test_fetch_file_from_url_adds_office_extension_when_no_extension(
+        self, mock_get
+    ):
+        """Test an extensionless export URL keeps the spreadsheet extension."""
+        mock_response = MagicMock()
+        mock_response.ok = True
+        mock_response.status_code = 200
+        mock_response.headers = {
+            "content-type": (
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+        }
+        mock_response.iter_content.return_value = [b"xlsx data"]
+        mock_response.close = MagicMock()
+        mock_get.return_value = mock_response
+
+        filename, content, mimetype = _fetch_file_from_url(
+            "https://example.com/spreadsheets/d/abc/export?format=xlsx"
+        )
+
+        assert filename.startswith("file_")
+        assert filename.endswith(".xlsx")
 
     @patch("composio.core.models._files.safe_get")
     def test_fetch_file_from_url_failure(self, mock_get):
